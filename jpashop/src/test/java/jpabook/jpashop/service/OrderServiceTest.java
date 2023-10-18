@@ -2,6 +2,8 @@ package jpabook.jpashop.service;
 
 import static org.assertj.core.api.Assertions.*;
 
+import java.util.List;
+
 import javax.persistence.EntityManager;
 
 import org.junit.jupiter.api.Assertions;
@@ -13,6 +15,7 @@ import org.springframework.transaction.annotation.Transactional;
 import jpabook.jpashop.domain.Address;
 import jpabook.jpashop.domain.Member;
 import jpabook.jpashop.domain.Order;
+import jpabook.jpashop.domain.OrderSearch;
 import jpabook.jpashop.domain.OrderStatus;
 import jpabook.jpashop.domain.item.Book;
 import jpabook.jpashop.exception.NotEnoughStockException;
@@ -90,6 +93,41 @@ class OrderServiceTest {
 
 		// then
 		fail("재고 수량 부족 예외가 발생 해야 한다.");
+	}
+
+	// 전체 조회
+	@Test
+	public void 전체_조회() {
+		// given
+		Member member = createMember();
+
+		Book book1 = createBook("시골 JPA", 10000, 10);
+		Book book2 = createBook("JPA", 10000, 10);
+
+		int orderCount = 2;
+
+		// when
+		Long orderId1 = orderService.order(member.getId(), book1.getId(), orderCount);
+		Long orderId2 = orderService.order(member.getId(), book2.getId(), orderCount);
+
+		Order findOrder = orderRepository.findOne(orderId1);
+		findOrder.cancel();
+
+		// then
+		OrderSearch orderSearch = new OrderSearch();
+		OrderSearch orderSearch1 = new OrderSearch("회원1", OrderStatus.CANCEL);
+
+		List<Order> ordersByString = orderRepository.findAllByString(orderSearch);
+		List<Order> ordersByCriteria = orderRepository.findAllByCriteria(orderSearch);
+
+		assertThat(ordersByString).isEqualTo(ordersByCriteria);
+
+		List<Order> ordersByStringCondition = orderRepository.findAllByString(orderSearch1);
+		List<Order> ordersByCriteriaCondition = orderRepository.findAllByCriteria(orderSearch1);
+
+		assertThat(ordersByCriteriaCondition.size()).isEqualTo(1);
+		assertThat(ordersByStringCondition.size()).isEqualTo(1);
+
 	}
 
 	private Book createBook(String name, int price, int stockQuantity) {
